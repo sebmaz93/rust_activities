@@ -54,4 +54,16 @@ enum Tile {
     Wood,
 }
 
+fn print_tile(tile: Tile) {
+    use Tile::*;
+
+    match tile {
+        Brick(brick @ BrickStyle::Gray | brick @ BrickStyle::Red) => {
+            println!("brick is {brick:?}")
+        }
+        Brick(other) => println!("Other brick"),
+        Dirt | Grass | Sand => println!("Ground"),
+    }
+}
+
 fn main() {}
