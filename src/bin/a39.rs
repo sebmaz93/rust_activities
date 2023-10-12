@@ -21,6 +21,7 @@
 //   by telling the thread to self-terminate
 // * Use `cargo test --bin a39` to test your program to ensure all cases are covered
 
+use colored::Colorize;
 use crossbeam_channel::{unbounded, Receiver};
 use std::thread::{self, JoinHandle};
 
@@ -28,8 +29,10 @@ enum LightMsg {
     // Add additional variants needed to complete the exercise
     ChangeColor(u8, u8, u8),
     Disconnect,
+    ChangeStatus(LightStatus),
 }
 
+#[derive(Debug)]
 enum LightStatus {
     Off,
     On,
@@ -37,9 +40,48 @@ enum LightStatus {
 
 fn spawn_light_thread(receiver: Receiver<LightMsg>) -> JoinHandle<LightStatus> {
     // Add code here to spawn a thread to control the light bulb
+    thread::spawn(move || {
+        let mut light_status = LightStatus::Off;
+        loop {
+            match receiver.recv() {
+                Ok(msg) => match msg {
+                    LightMsg::ChangeColor(r, g, b) => {
+                        println!("Light Color is {}", "        ".on_truecolor(r, g, b));
+                    }
+                    LightMsg::ChangeStatus(status) => {
+                        light_status = status;
+                        println!("light status {:?}", light_status);
+                    }
+                    LightMsg::Disconnect => {
+                        light_status = LightStatus::Off;
+                        println!("light disconnected  {:?}", light_status);
+                        break;
+                    }
+                },
+                Err(_) => {
+                    println!("Error, Disconnect");
+                    light_status = LightStatus::Off;
+                    break;
+                }
+            }
+        }
+        light_status
+    })
 }
 
-fn main() {}
+fn main() {
+    let (s, r) = unbounded();
+    let light = spawn_light_thread(r);
+
+    s.send(LightMsg::ChangeStatus(LightStatus::On));
+    s.send(LightMsg::ChangeColor(255, 0, 0));
+    s.send(LightMsg::ChangeColor(215, 41, 4));
+    s.send(LightMsg::ChangeColor(21, 35, 60));
+    s.send(LightMsg::ChangeStatus(LightStatus::Off));
+    s.send(LightMsg::Disconnect);
+
+    light.join();
+}
 
 #[cfg(test)]
 mod test {
